@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  tiktok-monitor-bot:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: tiktok-monitor-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - CHECK_INTERVAL=${CHECK_INTERVAL:-900}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - RETRY_DELAY=${RETRY_DELAY:-60}
+      - DATABASE_PATH=${DATABASE_PATH:-data/tiktok_monitor.db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FILE=${LOG_FILE:-logs/tiktok_monitor.log}
+      - TIKTOK_CLIENT_KEY=${TIKTOK_CLIENT_KEY:-}
+      - TIKTOK_CLIENT_SECRET=${TIKTOK_CLIENT_SECRET:-}
+      - TIKTOK_ACCESS_TOKEN=${TIKTOK_ACCESS_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+      - ./downloads:/app/downloads
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    networks:
+      - tiktok-monitor-network
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; import os; token = os.getenv('TELEGRAM_BOT_TOKEN', ''); requests.get(f'https://api.telegram.org/bot{token}/getMe', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+networks:
+  tiktok-monitor-network:
+    driver: bridge
